@@ -25,4 +25,14 @@ class YaSpellCheck: Codable {
         case word = "word"
         case spell = "s"
     }
+    
+    init(code: Int, position: Int, row: Int, column: Int, length: Int, word: String, spell: [String]) {
+        self.code = code
+        self.position = position
+        self.row = row
+        self.column = column
+        self.length = length
+        self.word = word
+        self.spell = spell
+    }
 }
