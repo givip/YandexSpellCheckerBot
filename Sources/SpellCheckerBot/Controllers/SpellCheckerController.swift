@@ -18,21 +18,30 @@ class SpellCheckerController {
         self.bot = bot
     }
     
-    static func menu(_ buttons: [String]) -> InlineKeyboardMarkup {
+    private static func menu(_ buttons: [String]) -> InlineKeyboardMarkup {
         var menuButtons = buttons.map({ (spell) -> InlineKeyboardButton in
             return InlineKeyboardButton(text: spell, callbackData: "fix:\(spell)")
         }).chunk(3)
         let additionalButtons = [
-            InlineKeyboardButton(text: "Skip", callbackData: "skip"),
-            InlineKeyboardButton(text: "Keep", callbackData: "keep"),
+            InlineKeyboardButton(text: "⁉️ Пропустить", callbackData: "skip"),
+            InlineKeyboardButton(text: "❎ Не исправлять", callbackData: "keep"),
             ]
         let systemButtons = [
-            InlineKeyboardButton(text: "Get corrected text", callbackData: "finish"),
-            InlineKeyboardButton(text: "Cancel", callbackData: "cancel"),
+            InlineKeyboardButton(text: "🚀 Готовый текст", callbackData: "finish"),
+            InlineKeyboardButton(text: "⚠️ Отменить", callbackData: "cancel"),
             ]
         menuButtons.append(additionalButtons)
         menuButtons.append(systemButtons)
         return InlineKeyboardMarkup(inlineKeyboard: menuButtons)
+    }
+    
+    func start(_ update: Update, _ context: BotContext?) throws {
+        guard let message = update.message else { return }
+        let text =
+        """
+        Отправь боту текст, который хочешь проверить на орфографию ✅
+        """
+        try sendMessage(message, text: text)
     }
     
     func spellCheck(_ update: Update, _ context: BotContext?) throws {
@@ -41,22 +50,24 @@ class SpellCheckerController {
             let user = message.from else { return }
         
         spellChecker.check(text, lang: Lang.ru, format: Format.plain) { [unowned self] (checks) in
+            guard !checks.isEmpty else {
+                try self.congrat(message: message)
+                return
+            }
+            
             let flow = YaSpellFlow()
             flow.start(text, checks: checks)
             
             self.sessions[user.id] = flow
             
-            guard let result: (textChunk: String, spellFixes:[String]) = flow.next() else { return }
-            let markup = SpellCheckerController.menu(result.spellFixes)
-            let params = Bot.SendMessageParams(chatId: .chat(message.chat.id),
-                                               text: result.textChunk,
-                                               parseMode: "HTML",
-                                               replyMarkup: .inlineKeyboardMarkup(markup))
-            try self.bot.sendMessage(params: params)
+            if let result: (textChunk: String, spellFixes:[String]) = flow.next() {
+                let markup = SpellCheckerController.menu(result.spellFixes)
+                try self.sendMessage(message, text: result.textChunk, markup: .inlineKeyboardMarkup(markup))
+            }
         }
     }
     
-    func inlineResponse(_ update: Update, _ context: BotContext?) throws {
+    func inline(_ update: Update, _ context: BotContext?) throws {
         guard let query = update.callbackQuery,
             let message = query.message,
             let data = query.data else { return }
@@ -71,25 +82,80 @@ class SpellCheckerController {
         switch command {
         case .keep:
             flow.keep()
+            try next(flow, to: message)
         case .skip:
             flow.skip()
+            try next(flow, to: message)
         case .fix:
-            if let last = parts.last {
-                flow.fix(String(last))
-            }
+            guard let last = parts.last else { return }
+            flow.fix(String(last))
+            try next(flow, to: message)
         case .finish:
-            let correctedText = flow.finish()
-            let params = Bot.EditMessageTextParams(chatId: .chat(message.chat.id), messageId: message.messageId, text: correctedText)
-            try! bot.editMessageText(params: params)
-            return
+            try finish(flow, to: message)
         case .cancel:
             sessions.removeValue(forKey: user.id)
-            return
+            
         }
-        
-        guard let result: (textChunk: String, spellFixes:[String]) = flow.next() else { return }
-        let markup = SpellCheckerController.menu(result.spellFixes)
-        let params = Bot.EditMessageTextParams(chatId: .chat(message.chat.id), messageId: message.messageId, text: result.textChunk, parseMode: "HTML", replyMarkup: markup)
+    }
+
+}
+
+private extension SpellCheckerController {
+    
+    func next(_ flow: YaSpellFlow, to message: Message) throws {
+        if let result: (textChunk: String, spellFixes:[String]) = flow.next() {
+            let markup = SpellCheckerController.menu(result.spellFixes)
+            try editMessage(message, text: result.textChunk, markup: markup)
+        } else {
+            try finish(flow, to: message)
+        }
+    }
+    
+    func finish(_ flow: YaSpellFlow, to message: Message) throws {
+        let correctedText = flow.finish()
+        let text =
+        """
+        ✅ Исправленный текст:
+        ```
+        \(correctedText)
+        ```
+        """
+        try editMessage(message, text: text)
+    }
+    
+    func congrat(message: Message) throws {
+        let text =
+        """
+        👏 Поздравляю! В вашем тексте ни одной ошибки!
+        """
+        try sendMessage(message, text: text)
+    }
+    
+    func cancel(message: Message) throws {
+        let text =
+        """
+        😔 Ты отменил проверку орфографии.
+        """
+        try sendMessage(message, text: text)
+    }
+}
+
+private extension SpellCheckerController {
+    
+    func editMessage(_ message: Message, text: String, markup: InlineKeyboardMarkup? = nil) throws {
+        let params = Bot.EditMessageTextParams(chatId: .chat(message.chat.id),
+                                               messageId: message.messageId,
+                                               text: text,
+                                               parseMode: "Markdown",
+                                               replyMarkup: markup)
         try bot.editMessageText(params: params)
+    }
+    
+    func sendMessage(_ message: Message, text: String, markup: ReplyMarkup? = nil) throws {
+        let params = Bot.SendMessageParams(chatId: .chat(message.chat.id),
+                                           text: text,
+                                           parseMode: "Markdown",
+                                           replyMarkup: markup)
+        try self.bot.sendMessage(params: params)
     }
 }

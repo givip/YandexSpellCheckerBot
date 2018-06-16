@@ -23,29 +23,6 @@ class YaSpellFlow: SpellFlow {
     private var fixes: [Action] = []
     private var text: String = ""
     
-    private var correctedText: String {
-        var addition = 0
-        var newText = text
-        fixes.enumerated().forEach { (offset: Int, element: YaSpellFlow.Action) in
-            let check = checks[offset]
-            let nsRange = NSRange(location: check.position + addition, length: check.length)
-            let range = Range(nsRange, in: newText)!
-            
-            switch element {
-            case .fix(let str):
-                newText.replaceSubrange(range, with: str)
-                print("### Replace with \(str)")
-                addition += abs(str.count.distance(to: check.length))
-                print("### \(addition)")
-            case .keep:
-                fixes[offset] = .keep
-            case .skip:
-                break
-            }
-        }
-        return newText
-    }
-    
     private var _step: Int = 0
     private var step: Int {
         get {
@@ -63,6 +40,16 @@ class YaSpellFlow: SpellFlow {
     }
     
     func next() -> (textChunk: String, spellFixes: [String])? {
+        for count in 0..<fixes.count {
+            if case Action.skip = fixes[step] {
+                break
+            } else {
+                step += 1
+                if count == fixes.count - 1 {
+                    return nil
+                }
+            }
+        }
         guard let chunk = textChunk(for: step) else { return nil }
         return (chunk, checks[step].spell)
     }
@@ -97,10 +84,28 @@ private extension YaSpellFlow {
         let finish = posRightOffset < text.count ? posRightOffset : text.count
         let nsRange = NSRange(location: start, length: finish - start)
         guard let range = Range(nsRange, in: text) else { return nil }
-        let mdText = String(text[range]).replacingOccurrences(of: check.word, with:
-            """
-            <code>\(check.word)</code>
-            """)
+        let mdText = String(text[range]).replacingOccurrences(of: check.word, with: "`\(check.word)`")
         return "...\(mdText)..."
+    }
+    
+    var correctedText: String {
+        var addition = 0
+        var newText = text
+        fixes.enumerated().forEach { (offset: Int, element: YaSpellFlow.Action) in
+            let check = checks[offset]
+            let nsRange = NSRange(location: check.position + addition, length: check.length)
+            let range = Range(nsRange, in: newText)!
+            
+            switch element {
+            case .fix(let str):
+                newText.replaceSubrange(range, with: str)
+                addition += abs(str.count - check.length)
+            case .keep:
+                fixes[offset] = .keep
+            case .skip:
+                return
+            }
+        }
+        return newText
     }
 }
