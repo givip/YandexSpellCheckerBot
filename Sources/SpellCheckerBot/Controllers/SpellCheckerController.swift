@@ -135,7 +135,7 @@ private extension SpellCheckerController {
         """
         😔 Ты отменил проверку орфографии.
         """
-        try sendMessage(message, text: text)
+        try editMessage(message, text: text)
     }
 }
 
