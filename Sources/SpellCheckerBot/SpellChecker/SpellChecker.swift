@@ -23,6 +23,8 @@ enum Command: String {
     case fix
     case skip
     case keep
+    case finish
+    case cancel
 }
 
 protocol SpellChecker {

@@ -9,15 +9,41 @@ import Foundation
 
 class YaSpellFlow: SpellFlow {
     
+    enum Action {
+        case fix(String)
+        case skip
+        case keep
+    }
+    
     typealias C = YaSpellCheck
     
     var chunkSideSize: Int = 40
     
     private var checks: [C] = []
-    private var fixes: [Int: String] = [:]
+    private var fixes: [Action] = []
     private var text: String = ""
-    private var fixedText: String {
-        return text
+    
+    private var correctedText: String {
+        var addition = 0
+        var newText = text
+        fixes.enumerated().forEach { (offset: Int, element: YaSpellFlow.Action) in
+            let check = checks[offset]
+            let nsRange = NSRange(location: check.position + addition, length: check.length)
+            let range = Range(nsRange, in: newText)!
+            
+            switch element {
+            case .fix(let str):
+                newText.replaceSubrange(range, with: str)
+                print("### Replace with \(str)")
+                addition += abs(str.count.distance(to: check.length))
+                print("### \(addition)")
+            case .keep:
+                fixes[offset] = .keep
+            case .skip:
+                break
+            }
+        }
+        return newText
     }
     
     private var _step: Int = 0
@@ -33,40 +59,46 @@ class YaSpellFlow: SpellFlow {
     func start(_ text: String, checks: [C]) {
         self.text = text
         self.checks = checks
+        self.fixes = Array(repeating: Action.skip, count: checks.count)
     }
     
     func next() -> (textChunk: String, spellFixes: [String])? {
-        guard let mdText = textChunk(for: step) else { return nil }
-        return (mdText, checks[step].spell)
+        guard let chunk = textChunk(for: step) else { return nil }
+        return (chunk, checks[step].spell)
     }
     
     func fix(_ text: String) {
-        fixes[step] = text
+        fixes[step] = .fix(text)
         step += 1
     }
     
     func skip() {
+        fixes[step] = .skip
         step += 1
     }
     
     func keep() {
-        checks.remove(at: step)
+        fixes[step] = .keep
+        step += 1
     }
     
     func finish() -> String {
-        return fixedText
+        return correctedText
     }
 }
 
 private extension YaSpellFlow {
     func textChunk(for step: Int) -> String? {
+        guard !checks.isEmpty else { return nil }
         let check = checks[step]
-        let start = check.position < chunkSideSize ? 0 : check.position - chunkSideSize
-        let finish = check.position + check.length + chunkSideSize < text.count ?
-            check.position + check.length + chunkSideSize : text.count
+        let posLeftOffset = check.position - chunkSideSize
+        let start = posLeftOffset < 0 ? 0 : posLeftOffset
+        let posRightOffset = check.position + check.length + chunkSideSize
+        let finish = posRightOffset < text.count ? posRightOffset : text.count
         let nsRange = NSRange(location: start, length: finish - start)
         guard let range = Range(nsRange, in: text) else { return nil }
-        let mdText = String(text[range]).replacingOccurrences(of: check.word, with: """
+        let mdText = String(text[range]).replacingOccurrences(of: check.word, with:
+            """
             <code>\(check.word)</code>
             """)
         return "...\(mdText)..."
