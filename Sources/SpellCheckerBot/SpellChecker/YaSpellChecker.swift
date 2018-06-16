@@ -21,7 +21,7 @@ final class YaSpellChecker: SpellChecker {
     
     public init() {
         self.queue = DispatchQueue(label: "SpellCheckerQueue", qos: .default, attributes: .concurrent, autoreleaseFrequency: .inherit, target: nil)
-        self.urlSession = URLSession(configuration: .ephemeral)
+        self.urlSession = URLSession()
     }
     
     func check(_ text: String, lang: Lang, format: Format, callback: @escaping ([T]) throws -> ()) {
