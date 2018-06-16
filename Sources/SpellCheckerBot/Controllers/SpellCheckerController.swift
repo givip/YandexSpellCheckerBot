@@ -94,10 +94,9 @@ class SpellCheckerController {
             try finish(flow, to: message)
         case .cancel:
             sessions.removeValue(forKey: user.id)
-            
+            try cancel(message: message)
         }
     }
-
 }
 
 private extension SpellCheckerController {
