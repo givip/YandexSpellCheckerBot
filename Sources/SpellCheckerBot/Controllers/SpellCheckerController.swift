@@ -41,7 +41,7 @@ class SpellCheckerController {
         """
         Отправь боту текст, который хочешь проверить на орфографию ✅
         """
-        try sendMessage(message, text: text)
+        try respond(to: message, text: text)
     }
     
     func spellCheck(_ update: Update, _ context: BotContext?) throws {
@@ -62,7 +62,7 @@ class SpellCheckerController {
             
             if let result: (textChunk: String, spellFixes:[String]) = flow.next() {
                 let markup = SpellCheckerController.menu(result.spellFixes)
-                try self.sendMessage(message, text: result.textChunk, markup: .inlineKeyboardMarkup(markup))
+                try self.respond(to: message, text: result.textChunk, markup: .inlineKeyboardMarkup(markup))
             }
         }
     }
@@ -104,7 +104,7 @@ private extension SpellCheckerController {
     func next(_ flow: YaSpellFlow, to message: Message) throws {
         if let result: (textChunk: String, spellFixes:[String]) = flow.next() {
             let markup = SpellCheckerController.menu(result.spellFixes)
-            try editMessage(message, text: result.textChunk, markup: markup)
+            try edit(message: message, text: result.textChunk, markup: markup)
         } else {
             try finish(flow, to: message)
         }
@@ -112,36 +112,25 @@ private extension SpellCheckerController {
     
     func finish(_ flow: YaSpellFlow, to message: Message) throws {
         let correctedText = flow.finish()
-        let text =
-        """
-        ✅ Исправленный текст:
-        ```
-        \(correctedText)
-        ```
-        """
-        try editMessage(message, text: text)
+        let caption = "✅ Исправленный текст:"
+        let text = "```\(correctedText)```"
+        try edit(message: message, text: caption)
+        try respond(to: message, text: text)
     }
     
     func congrat(message: Message) throws {
-        let text =
-        """
-        👏 Поздравляю! В вашем тексте ни одной ошибки!
-        """
-        try sendMessage(message, text: text)
+        try message.reply("👏 Поздравляю! В вашем тексте ни одной ошибки!", from: bot)
     }
     
     func cancel(message: Message) throws {
-        let text =
-        """
-        😔 Ты отменил проверку орфографии.
-        """
-        try editMessage(message, text: text)
+        let text = "😔 Ты отменил проверку орфографии."
+        try edit(message: message, text: text)
     }
 }
 
 private extension SpellCheckerController {
     
-    func editMessage(_ message: Message, text: String, markup: InlineKeyboardMarkup? = nil) throws {
+    func edit(message: Message, text: String, markup: InlineKeyboardMarkup? = nil) throws {
         let params = Bot.EditMessageTextParams(chatId: .chat(message.chat.id),
                                                messageId: message.messageId,
                                                text: text,
@@ -150,7 +139,7 @@ private extension SpellCheckerController {
         try bot.editMessageText(params: params)
     }
     
-    func sendMessage(_ message: Message, text: String, markup: ReplyMarkup? = nil) throws {
+    func respond(to message: Message, text: String, markup: ReplyMarkup? = nil) throws {
         let params = Bot.SendMessageParams(chatId: .chat(message.chat.id),
                                            text: text,
                                            parseMode: "Markdown",
