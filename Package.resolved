@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/vapor/core.git",
         "state": {
           "branch": null,
-          "revision": "174f909bc048a6aff27d6cb4c31810971f912cca",
-          "version": "3.2.2"
+          "revision": "e5582911ed940289212a36321e15ec561d947dbe",
+          "version": "3.3.0"
         }
       },
       {
@@ -96,8 +96,8 @@
         "repositoryURL": "https://github.com/givip/Telegrammer.git",
         "state": {
           "branch": null,
-          "revision": "0758951a7c7a13cd819adec288bf13e1a7684987",
-          "version": "0.2.3"
+          "revision": "17924450b1f958bc6270e52a3366b0aaa5227237",
+          "version": "0.2.4"
         }
       }
     ]
