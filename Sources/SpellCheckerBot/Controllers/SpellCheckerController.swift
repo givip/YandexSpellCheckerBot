@@ -37,11 +37,7 @@ class SpellCheckerController {
     
     func start(_ update: Update, _ context: BotContext?) throws {
         guard let message = update.message else { return }
-        let text =
-        """
-        Отправь боту текст, который хочешь проверить на орфографию ✅
-        """
-        try respond(to: message, text: text)
+        try respond(to: message, text: "Отправь боту текст, который хочешь проверить на орфографию ✅")
     }
     
     func spellCheck(_ update: Update, _ context: BotContext?) throws {
@@ -112,19 +108,16 @@ private extension SpellCheckerController {
     
     func finish(_ flow: YaSpellFlow, to message: Message) throws {
         let correctedText = flow.finish()
-        let caption = "✅ Исправленный текст:"
-        let text = "```\(correctedText)```"
-        try edit(message: message, text: caption)
-        try respond(to: message, text: text)
+        try edit(message: message, text: "✅ Исправленный текст:")
+        try respond(to: message, text: "```\(correctedText)```")
     }
     
     func congrat(message: Message) throws {
-        try message.reply("👏 Поздравляю! В вашем тексте ни одной ошибки!", from: bot)
+		try message.reply(text: "👏 Поздравляю! В вашем тексте ни одной ошибки!", from: bot)
     }
     
     func cancel(message: Message) throws {
-        let text = "😔 Ты отменил проверку орфографии."
-        try edit(message: message, text: text)
+        try edit(message: message, text: "😔 Ты отменил проверку орфографии.")
     }
 }
 
@@ -134,7 +127,7 @@ private extension SpellCheckerController {
         let params = Bot.EditMessageTextParams(chatId: .chat(message.chat.id),
                                                messageId: message.messageId,
                                                text: text,
-                                               parseMode: "Markdown",
+                                               parseMode: .markdown,
                                                replyMarkup: markup)
         try bot.editMessageText(params: params)
     }
@@ -142,7 +135,7 @@ private extension SpellCheckerController {
     func respond(to message: Message, text: String, markup: ReplyMarkup? = nil) throws {
         let params = Bot.SendMessageParams(chatId: .chat(message.chat.id),
                                            text: text,
-                                           parseMode: "Markdown",
+                                           parseMode: .markdown,
                                            replyMarkup: markup)
         try self.bot.sendMessage(params: params)
     }
