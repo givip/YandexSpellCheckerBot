@@ -109,7 +109,7 @@ private extension SpellCheckerController {
     func finish(_ flow: YaSpellFlow, to message: Message) throws {
         let correctedText = flow.finish()
         try edit(message: message, text: "✅ Исправленный текст:")
-        try respond(to: message, text: "```\(correctedText)```")
+        try respond(to: message, text: "```\n\(correctedText)\n```")
     }
     
     func congrat(message: Message) throws {
