@@ -23,12 +23,12 @@ class SpellCheckerController {
             return InlineKeyboardButton(text: spell, callbackData: "fix:\(spell)")
         }).chunk(3)
         let additionalButtons = [
-            InlineKeyboardButton(text: "⁉️ Пропустить", callbackData: "skip"),
-            InlineKeyboardButton(text: "❎ Не исправлять", callbackData: "keep"),
+            InlineKeyboardButton(text: "⁉️ Исправить потом", callbackData: "skip"),
+            InlineKeyboardButton(text: "❎ Было правильно", callbackData: "keep"),
             ]
         let systemButtons = [
-            InlineKeyboardButton(text: "🚀 Готовый текст", callbackData: "finish"),
-            InlineKeyboardButton(text: "⚠️ Отменить", callbackData: "cancel"),
+            InlineKeyboardButton(text: "🚀 Текст с исправлениями", callbackData: "finish"),
+            InlineKeyboardButton(text: "⚠️ Отменить проверку", callbackData: "cancel"),
             ]
         menuButtons.append(additionalButtons)
         menuButtons.append(systemButtons)
@@ -109,7 +109,7 @@ private extension SpellCheckerController {
     func finish(_ flow: YaSpellFlow, to message: Message) throws {
         let correctedText = flow.finish()
         try edit(message: message, text: "✅ Исправленный текст:")
-        try respond(to: message, text: "```\(correctedText)```")
+        try respond(to: message, text: "```\n\(correctedText)\n```")
     }
     
     func congrat(message: Message) throws {
