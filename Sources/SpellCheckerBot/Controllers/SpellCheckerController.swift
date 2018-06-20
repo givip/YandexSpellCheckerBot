@@ -22,16 +22,12 @@ class SpellCheckerController {
         var menuButtons = buttons.map({ (spell) -> InlineKeyboardButton in
             return InlineKeyboardButton(text: spell, callbackData: "fix:\(spell)")
         }).chunk(3)
-        let additionalButtons = [
-            InlineKeyboardButton(text: "⁉️ Исправить потом", callbackData: "skip"),
-            InlineKeyboardButton(text: "❎ Было правильно", callbackData: "keep"),
-            ]
-        let systemButtons = [
-            InlineKeyboardButton(text: "🚀 Текст с исправлениями", callbackData: "finish"),
-            InlineKeyboardButton(text: "⚠️ Отменить проверку", callbackData: "cancel"),
-            ]
-        menuButtons.append(additionalButtons)
-        menuButtons.append(systemButtons)
+        
+        menuButtons.append([ InlineKeyboardButton(text: "⁉️ Исправить потом", callbackData: "skip") ])
+        menuButtons.append([ InlineKeyboardButton(text: "❎ Было правильно", callbackData: "keep") ])
+        menuButtons.append([ InlineKeyboardButton(text: "🚀 Текст с исправлениями", callbackData: "finish") ])
+        menuButtons.append([ InlineKeyboardButton(text: "⚠️ Отменить проверку", callbackData: "cancel") ])
+        
         return InlineKeyboardMarkup(inlineKeyboard: menuButtons)
     }
     
@@ -55,11 +51,8 @@ class SpellCheckerController {
             flow.start(text, checks: checks)
             
             self.sessions[user.id] = flow
-            
-            if let result: (textChunk: String, spellFixes:[String]) = flow.next() {
-                let markup = SpellCheckerController.menu(result.spellFixes)
-                try self.respond(to: message, text: result.textChunk, markup: .inlineKeyboardMarkup(markup))
-            }
+
+            try self.begin(flow, to: message)
         }
     }
     
@@ -97,10 +90,20 @@ class SpellCheckerController {
 
 private extension SpellCheckerController {
     
+    func commentedChunk(_ chunk: String) -> String {
+        return "*Исправьте ошибку:*\n\n\(chunk)"
+    }
+    
+    func begin(_ flow: YaSpellFlow, to message: Message) throws {
+        guard let result: (textChunk: String, spellFixes:[String]) = flow.next() else { return }
+        let markup = SpellCheckerController.menu(result.spellFixes)
+        try self.respond(to: message, text: commentedChunk(result.textChunk), markup: .inlineKeyboardMarkup(markup))
+    }
+    
     func next(_ flow: YaSpellFlow, to message: Message) throws {
         if let result: (textChunk: String, spellFixes:[String]) = flow.next() {
             let markup = SpellCheckerController.menu(result.spellFixes)
-            try edit(message: message, text: result.textChunk, markup: markup)
+            try edit(message: message, text: commentedChunk(result.textChunk), markup: markup)
         } else {
             try finish(flow, to: message)
         }
@@ -138,5 +141,10 @@ private extension SpellCheckerController {
                                            parseMode: .markdown,
                                            replyMarkup: markup)
         try self.bot.sendMessage(params: params)
+    }
+    
+    func delete(message: Message) throws {
+        let params = Bot.DeleteMessageParams(chatId: .chat(message.chat.id), messageId: message.messageId)
+        try self.bot.deleteMessage(params: params)
     }
 }
