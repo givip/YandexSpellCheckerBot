@@ -92,14 +92,13 @@ private extension YaSpellFlow {
         var addition = 0
         var newText = text
         fixes.enumerated().forEach { (offset: Int, element: YaSpellFlow.Action) in
-            let check = checks[offset]
-            let nsRange = NSRange(location: check.position + addition, length: check.length)
-            let range = Range(nsRange, in: newText)!
-            
             switch element {
             case .fix(let str):
+                let check = checks[offset]
+                let nsRange = NSRange(location: check.position + addition, length: check.length)
+                guard let range = Range(nsRange, in: newText) else { return }
                 newText.replaceSubrange(range, with: str)
-                addition += abs(str.count - check.length)
+                addition += (str.count - check.word.count)
             case .keep:
                 fixes[offset] = .keep
             case .skip:

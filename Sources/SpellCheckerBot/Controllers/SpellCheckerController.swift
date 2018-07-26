@@ -12,15 +12,23 @@ class SpellCheckerController {
     
     var sessions: [Int64: YaSpellFlow] = [:]
     let spellChecker = YaSpellChecker()
+    var cache: [String: String] = [:]
     let bot: Bot
+    
+    let attentionText = """
+    📌 Внимание!
+    📩 Отправляйте текст БЕЗ смайликов, БЕЗ хештегов и БЕЗ невидимых символов, иначе, проверка Яндекс.Спеллером будет некорректна.
+    """
     
     init(bot: Bot) {
         self.bot = bot
     }
     
-    private static func menu(_ buttons: [String]) -> InlineKeyboardMarkup {
+    private func menu(_ buttons: [String]) -> InlineKeyboardMarkup {
         var menuButtons = buttons.map({ (spell) -> InlineKeyboardButton in
-            return InlineKeyboardButton(text: spell, callbackData: "fix:\(spell)")
+            let key = UUID().uuidString
+            self.cache[key] = spell
+            return InlineKeyboardButton(text: spell, callbackData: "fix:\(key)")
         }).chunk(3)
         
         menuButtons.append([ InlineKeyboardButton(text: "⁉️ Исправить потом", callbackData: "skip") ])
@@ -33,7 +41,7 @@ class SpellCheckerController {
     
     func start(_ update: Update, _ context: BotContext?) throws {
         guard let message = update.message else { return }
-        try respond(to: message, text: "Отправь боту текст, который хочешь проверить на орфографию ✅")
+        try respond(to: message, text: "Отправь боту текст, который хочешь проверить на орфографию ✅\n\n\(attentionText)")
     }
     
     func spellCheck(_ update: Update, _ context: BotContext?) throws {
@@ -66,7 +74,7 @@ class SpellCheckerController {
         
         guard let flow = sessions[user.id],
             let first = parts.first,
-            let command = Command(rawValue: String(first)) else { return }
+            let command = Command(rawValue: "\(first)") else { return }
         
         switch command {
         case .keep:
@@ -76,8 +84,9 @@ class SpellCheckerController {
             flow.skip()
             try next(flow, to: message)
         case .fix:
-            guard let last = parts.last else { return }
-            flow.fix(String(last))
+            guard let last = parts.last, let fixData = cache["\(last)"] else { return }
+            cache.removeValue(forKey: "\(last)")
+            flow.fix(fixData)
             try next(flow, to: message)
         case .finish:
             try finish(flow, to: message)
@@ -91,18 +100,18 @@ class SpellCheckerController {
 private extension SpellCheckerController {
     
     func commentedChunk(_ chunk: String) -> String {
-        return "*Исправьте ошибку:*\n\n\(chunk)"
+        return "\(attentionText)\n\n*Исправьте ошибку:*\n\n\(chunk)"
     }
     
     func begin(_ flow: YaSpellFlow, to message: Message) throws {
         guard let result: (textChunk: String, spellFixes:[String]) = flow.next() else { return }
-        let markup = SpellCheckerController.menu(result.spellFixes)
+        let markup = menu(result.spellFixes)
         try self.respond(to: message, text: commentedChunk(result.textChunk), markup: .inlineKeyboardMarkup(markup))
     }
     
     func next(_ flow: YaSpellFlow, to message: Message) throws {
         if let result: (textChunk: String, spellFixes:[String]) = flow.next() {
-            let markup = SpellCheckerController.menu(result.spellFixes)
+            let markup = menu(result.spellFixes)
             try edit(message: message, text: commentedChunk(result.textChunk), markup: markup)
         } else {
             try finish(flow, to: message)
