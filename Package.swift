@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "SpellCheckerBot",
     dependencies: [
-        .package(url: "https://github.com/givip/Telegrammer.git", from: "0.2.0")
+		.package(url: "https://github.com/givip/Telegrammer.git", .branch("develop"))
     ],
     targets: [
         .target( name: "SpellCheckerBot", dependencies: ["Telegrammer"]),

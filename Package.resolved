@@ -95,9 +95,9 @@
         "package": "Telegrammer",
         "repositoryURL": "https://github.com/givip/Telegrammer.git",
         "state": {
-          "branch": null,
-          "revision": "587be73cf47ce6383a393f7f345dce779ff6f615",
-          "version": "0.2.6"
+          "branch": "develop",
+          "revision": "5d8468791c2e6200a12e529c995362ee52ca572c",
+          "version": null
         }
       }
     ]
