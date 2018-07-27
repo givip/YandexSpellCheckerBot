@@ -4,10 +4,10 @@ import Telegrammer
 
 ///Getting token from enviroment variable (most safe, recommended)
 guard let token = Enviroment.get("SPELL_CHECKER_BOT_TOKEN"),
-	let ip = Enviroment.get("SPELL_CHECKER_BOT_BOT_IP"),
-	let portStr = Enviroment.get("SPELL_CHECKER_BOT_BOT_PORT"),
+	let ip = Enviroment.get("SPELL_CHECKER_BOT_IP"),
+	let portStr = Enviroment.get("SPELL_CHECKER_BOT_PORT"),
 	let port = Int(portStr),
-	let url = Enviroment.get("SPELL_CHECKER_BOT_BOT_WEBHOOK_URL"),
+	let url = Enviroment.get("SPELL_CHECKER_BOT_WEBHOOK_URL"),
 	let publicCert = Enviroment.get("SPELL_CHECKER_BOT_PUBLIC_KEY"),
 	let privateKey = Enviroment.get("SPELL_CHECKER_BOT_PRIVATE_KEY") else { exit(1) }
 
